@@ -1,0 +1,166 @@
+package ocrm.labex.feevale.br.ocr_mobile.view.adapters;
+
+import android.app.Activity;
+import android.content.Context;
+import android.graphics.Color;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
+import android.widget.CheckBox;
+import android.widget.ImageView;
+import android.widget.Toast;
+
+import java.util.List;
+
+import ocrm.labex.feevale.br.ocr_mobile.MainActivity;
+import ocrm.labex.feevale.br.ocr_mobile.R;
+import ocrm.labex.feevale.br.ocr_mobile.logicmodel.ImageDAO;
+import ocrm.labex.feevale.br.ocr_mobile.model.Image;
+import ocrm.labex.feevale.br.ocr_mobile.utils.FileUtils;
+import ocrm.labex.feevale.br.ocr_mobile.view.adapters.utils.ItemModel;
+import ocrm.labex.feevale.br.ocr_mobile.view.adapters.utils.LoadDirectoryAndImagesTask;
+import ocrm.labex.feevale.br.ocr_mobile.view.fragments.ImageTextFragment;
+
+/**
+ * Created by 0126128 on 17/11/2014.
+ */
+public class FilesManagerAdapter extends BaseAdapter {
+
+    private List<ItemModel> models;
+    private Activity activity;
+    private LayoutInflater layoutInflater;
+
+    public FilesManagerAdapter(List<ItemModel> models, Activity activity) {
+        this.models = models;
+        this.activity = activity;
+        this.layoutInflater = (LayoutInflater)activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+    }
+
+    @Override
+    public int getCount() {
+        return models.size();
+    }
+
+    @Override
+    public Object getItem(int i) {
+        return models.get(i);
+    }
+
+    @Override
+    public long getItemId(int i) {
+        return (Long)models.get(i).getId();
+    }
+
+    @Override
+    public View getView(int i, View view, ViewGroup viewGroup) {
+        switch (models.get(i).getType()){
+            case ItemModel.DIRECTORY:
+                view = ItemView.DIRECTORY.setMyView(activity, view, models.get(i));
+                break;
+            case ItemModel.IMAGE:
+                view = ItemView.IMAGE.setMyView(activity, view, models.get(i));
+                break;
+        }
+
+
+        return view;
+    }
+
+
+}
+
+enum ItemView {
+
+    DIRECTORY(ItemModel.DIRECTORY),
+    IMAGE(ItemModel.IMAGE){
+
+        public View.OnLongClickListener setMyLongClick(final Activity activity, final ItemModel model) {
+            return new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View view) {
+                    ImageDAO imageDAO = new ImageDAO(activity);
+                    Image image = imageDAO.getItemById(model.getId());
+                    if(image != null)
+                        ((MainActivity) activity).changeFragment(new ImageTextFragment(activity, image));
+                    else
+                        Toast.makeText(activity, "Ops! Problemas ao localizar imagem.", Toast.LENGTH_LONG).show();
+                    return true;
+                }
+            };
+        }
+    };
+
+    private LayoutInflater inflater;
+    private int type;
+
+    private ItemView(int type){
+        this.type = type;
+    }
+
+    public View.OnClickListener setMyEvent(final Activity activity, final ItemModel model,final CheckBox checkBox){
+        return new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                if (v != null) {
+                    CheckBox checkBox = (CheckBox)v.findViewById(R.id.imageCheckBox);
+                    if(checkBox.isChecked())
+                        model.setSelected(false);
+                    else
+                        model.setSelected(true);
+
+                    checkBox.setChecked(!checkBox.isChecked());
+                }
+            }
+        };
+    }
+
+    public View setMyView(Activity activity, View view, ItemModel model){
+        inflater = (LayoutInflater)activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        if (view == null)
+            view = inflater.inflate(R.layout.manager_grid_item, null);
+
+        CheckBox checkBox = (CheckBox)view.findViewById(R.id.imageCheckBox);
+        checkBox.setText(model.getName());
+        checkBox.setSelected(model.isSelected());
+        view.setOnTouchListener(changeBackgroud());
+        ImageView imageView = (ImageView) view.findViewById(R.id.imageViewGridItem);
+
+        if(type == ItemModel.DIRECTORY){
+            imageView.setImageResource(R.drawable.pasta_arquivos);
+        }else{
+            imageView.setImageBitmap(new FileUtils(activity).getExternalImage(model.getName()));
+        }
+
+        view.setOnClickListener(setMyEvent(activity, model, checkBox));
+        view.setOnLongClickListener(setMyLongClick(activity, model));
+
+        return view;
+    }
+
+    public View.OnLongClickListener setMyLongClick(final Activity activity, final ItemModel model) {
+        return new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View view) {
+                new LoadDirectoryAndImagesTask((MainActivity)activity, model).execute();
+                return true;
+            }
+        };
+    }
+
+    private View.OnTouchListener changeBackgroud() {
+        return new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                if(motionEvent.getAction() == MotionEvent.ACTION_DOWN)
+                    view.setBackgroundColor(Color.parseColor("#7F2119"));
+                else if (motionEvent.getAction() == MotionEvent.ACTION_UP)
+                    view.setBackgroundColor(Color.parseColor("#FFFFFF"));
+                return false;
+            }
+        };
+    }
+}

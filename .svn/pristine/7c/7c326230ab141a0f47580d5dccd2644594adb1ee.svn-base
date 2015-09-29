@@ -1,0 +1,158 @@
+package ocrm.labex.feevale.br.ocr_mobile;
+
+import android.app.ActionBar;
+import android.content.res.Configuration;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.os.Bundle;
+import android.support.v4.app.ActionBarDrawerToggle;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.ListView;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+
+import ocrm.labex.feevale.br.ocr_mobile.model.Directory;
+import ocrm.labex.feevale.br.ocr_mobile.model.Image;
+import ocrm.labex.feevale.br.ocr_mobile.model.Tags;
+import ocrm.labex.feevale.br.ocr_mobile.view.adapters.DrawerAdapter;
+import ocrm.labex.feevale.br.ocr_mobile.view.adapters.utils.DrawerHandler;
+import ocrm.labex.feevale.br.ocr_mobile.view.adapters.utils.ItemAdapter;
+import ocrm.labex.feevale.br.ocr_mobile.view.fragments.MyFolderFragment;
+
+
+public class MainActivity extends FragmentActivity implements MyFolderFragment.EventosClick, DrawerHandler{
+    private CharSequence mTitle;
+    private Fragment     fragment;
+    private MyFolderFragment myFolderFragment;
+
+    protected DrawerLayout drawerLayout;
+    protected ActionBarDrawerToggle actionBarDrawerToggle;
+    protected ListView drawerListView;
+    protected List<ItemAdapter> itemsAdapter;
+
+    /**
+     *
+     * TODO: Deletar esses dois caras aí em baixo !
+     */
+    private HashSet<Tags> tagsHashSet;
+    private HashSet<Image> images;
+    private Directory directory;
+    private HashSet<Directory> directories;
+    private Directory clicado;
+
+    public MainActivity() {
+        itemsAdapter = Arrays.asList(ItemAdapter.FILES, ItemAdapter.REPOSITORIES, ItemAdapter.SCANNER,
+                ItemAdapter.TAGS);
+    }
+
+    public MainActivity(Fragment fragment) {
+        this();
+        this.fragment = fragment;
+    }
+
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        ActionBar bar = getActionBar();
+        bar.setBackgroundDrawable(new ColorDrawable(Color.parseColor("#780A0A")));
+
+        drawerListView = (ListView) findViewById(R.id.navigation_drawer);
+        drawerListView.setAdapter(new DrawerAdapter(this, itemsAdapter, this));
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        actionBarDrawerToggle = new ActionBarDrawerToggle(this, drawerLayout,
+                R.drawable.ic_drawer, R.string.drawer_open, R.string.drawer_close);
+        drawerLayout.setDrawerListener(actionBarDrawerToggle);
+        getActionBar().setDisplayHomeAsUpEnabled(true);
+        drawerLayout.setDrawerShadow(R.drawable.drawer_shadow, GravityCompat.START);
+
+        myFolderFragment = new MyFolderFragment(this, this);
+        changeFragment(myFolderFragment);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if(fragment instanceof MyFolderFragment){
+
+            if(clicado != null && clicado.getNodeDirectory() == 0L){
+                myFolderFragment = new MyFolderFragment(this, this);
+            }else{
+                myFolderFragment = new MyFolderFragment(this, this, clicado);
+            }
+            changeFragment(myFolderFragment);
+        }else{
+            super.onBackPressed();
+        }
+    }
+
+    public void changeFragment(Fragment fragment){
+        super.onPostResume();
+        FragmentTransaction fragmentTransaction = this.getSupportFragmentManager().beginTransaction();
+        fragmentTransaction.setTransition(FragmentTransaction.TRANSIT_EXIT_MASK);
+        fragmentTransaction.replace(R.id.container, fragment);
+        fragmentTransaction.addToBackStack(null);
+        fragmentTransaction.commit();
+        this.fragment = fragment;
+    }
+
+    public Fragment getFragment()  {
+        return fragment;
+    }
+
+    public void setFragment(Fragment fragment) {
+        this.fragment = fragment;
+    }
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (actionBarDrawerToggle.onOptionsItemSelected(item)) {
+            return true;
+        }
+        if (id == R.id.action_settings) {
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void retornaId(Directory dir) {
+        this.clicado = dir;
+    }
+
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+        actionBarDrawerToggle.syncState();
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        actionBarDrawerToggle.onConfigurationChanged(newConfig);
+    }
+
+    @Override
+    public void executeActionDrawer() {
+        drawerLayout.closeDrawer(drawerListView);
+    }
+}

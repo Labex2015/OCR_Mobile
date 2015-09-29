@@ -1,0 +1,234 @@
+package ocrm.labex.feevale.br.ocr_mobile.view;
+
+import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.net.Uri;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.Toast;
+
+import ocrm.labex.feevale.br.ocr_mobile.R;
+import ocrm.labex.feevale.br.ocr_mobile.components.MyLine;
+import ocrm.labex.feevale.br.ocr_mobile.components.MyShape;
+import ocrm.labex.feevale.br.ocr_mobile.utils.AppVariables;
+import ocrm.labex.feevale.br.ocr_mobile.utils.FileUtils;
+import ocrm.labex.feevale.br.ocr_mobile.utils.ImageUtils;
+import ocrm.labex.feevale.br.ocr_mobile.utils.MessageResponse;
+import ocrm.labex.feevale.br.ocr_mobile.utils.crop.BitmapCoordinate;
+import ocrm.labex.feevale.br.ocr_mobile.utils.crop.Quadrilateral;
+
+/**
+ * Created by 0118424 on 21/10/2014.
+ */
+public class CropActivity extends Activity implements View.OnTouchListener {
+
+    private ViewGroup group;
+    ImageView imageView1;
+    ImageView imageView2;
+    ImageView imageView3;
+    ImageView imageView4;
+    private int deltaX;
+    private int deltaY;
+    MyLine lineA;
+    MyLine lineB;
+    MyLine lineC;
+    MyLine lineD;
+    Button buttonCrop;
+    MyShape myShape;
+    int     maxX;
+    int     maxY;
+    int imagemToSelect =  R.drawable.kim;
+    ImageView cropMain;
+    Uri imageUri;
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_crop);
+
+
+
+
+        group = (ViewGroup)findViewById(R.id.dady);
+
+       /* acoes para configurar a imagem */
+
+        Drawable myIcon = getResources().getDrawable(imagemToSelect);
+        cropMain = (ImageView) findViewById(R.id.dummy);
+        buttonCrop = (Button)findViewById(R.id.buttonCrop);
+        buttonCrop.setOnClickListener(cropEvent(this));
+
+        Bitmap bitmap = FileUtils.getTemporaryImage(this);
+        cropMain.setImageBitmap(bitmap);
+
+
+
+
+        /*encerra acoes de configuracao */
+
+        imageView1 = new ImageView(this);
+        imageView1.setImageResource(R.drawable.esfera);
+        imageView1.setScaleType(ImageView.ScaleType.MATRIX);
+        imageView1.setOnTouchListener(this);
+        imageView1.setTag("1");
+
+
+
+        imageView2 = new ImageView(this);
+        imageView2.setImageResource(R.drawable.esfera);
+        imageView2.setTag("2");
+        imageView2.setScaleType(ImageView.ScaleType.MATRIX);
+        imageView2.setOnTouchListener(this);
+
+
+        imageView3 = new ImageView(this);
+        imageView3.setImageResource(R.drawable.esfera);
+        imageView3.setTag("3");
+        imageView3.setScaleType(ImageView.ScaleType.MATRIX);
+        imageView3.setOnTouchListener(this);
+
+        imageView4 = new ImageView(this);
+        imageView4.setImageResource(R.drawable.esfera);
+        imageView4.setScaleType(ImageView.ScaleType.MATRIX);
+        imageView4.setTag("4");
+
+        imageView4.setOnTouchListener(this);
+        lineA = new MyLine(this, Color.RED);
+        lineB = new MyLine(this, Color.BLUE);
+        lineC = new MyLine(this, Color.MAGENTA);
+        lineD = new MyLine(this, Color.BLACK);
+
+
+
+        myShape = new MyShape(this, imageView1, imageView2, imageView3, imageView4);
+
+
+        group.addView(imageView1);
+        group.addView(imageView2);
+        group.addView(imageView3);
+        group.addView(imageView4);
+        group.addView(lineA);
+        group.addView(lineB);
+        group.addView(lineC);
+        group.addView(lineD);
+        group.addView(myShape);
+
+
+    }
+
+
+    @Override
+    public boolean onTouch(View view, MotionEvent motionEvent) {
+
+        BitmapDrawable bd = (BitmapDrawable) this.getResources().getDrawable(imagemToSelect);
+
+        int heightImage = bd.getBitmap().getHeight();
+        int widthImage  = bd.getBitmap().getWidth();
+
+        //Posicao em x e y de cada nó
+        final int X = (int) motionEvent.getRawX();
+        final int Y = (int) motionEvent.getRawY();
+
+        // cropmain representa a view de corte
+        int wImageView =  cropMain.getWidth();
+        int hImageView =  cropMain.getHeight();
+
+        float positionX = (float) cropMain.getWidth();
+        float positionY = (float) cropMain.getHeight();
+
+
+
+        switch(motionEvent.getAction() & MotionEvent.ACTION_MASK) {
+
+            case MotionEvent.ACTION_DOWN:
+                FrameLayout.LayoutParams Params = (FrameLayout.LayoutParams) view.getLayoutParams();
+                deltaX = X - Params.leftMargin;
+                deltaY = Y - Params.topMargin;
+                break;
+            case MotionEvent.ACTION_UP:
+
+                break;
+            case MotionEvent.ACTION_POINTER_DOWN:
+                break;
+            case MotionEvent.ACTION_POINTER_UP:
+                break;
+            case MotionEvent.ACTION_MOVE:
+                FrameLayout.LayoutParams layoutParams =
+                        (FrameLayout.LayoutParams) view.getLayoutParams();
+                layoutParams.leftMargin = X - deltaX;
+                layoutParams.topMargin = Y - deltaY;
+                layoutParams.rightMargin = -50;
+                layoutParams.bottomMargin = -50;
+                int actionBarHeight = getActionBar().getHeight();
+
+
+                View linear = (View) findViewById(R.id.wrapImage);
+                int heightLinear = linear.getHeight();
+
+                if(X >= widthImage){
+                    layoutParams.leftMargin = (int) widthImage;
+                }else if(layoutParams.leftMargin < 0){
+                    layoutParams.leftMargin = 0;
+                }
+                if(heightImage <= Y){
+                    layoutParams.topMargin = (int) heightImage;
+                }else if(layoutParams.topMargin < 0) {
+                   layoutParams.topMargin = 0;
+                }else if(Y > linear.getHeight()){
+                   layoutParams.topMargin = (int) (layoutParams.topMargin - (layoutParams.topMargin * 0.10));
+                }
+                view.setLayoutParams(layoutParams);
+                drawMyLine();
+                break;
+        }
+
+        group.invalidate();
+        return true;
+    }
+
+    private void drawMyLine(){
+        lineA.invalidate();
+        lineA.setPosition(imageView1.getX()+20,imageView1.getY()+20, imageView2.getX()+20,imageView2.getY()+20);
+        lineB.invalidate();
+        lineB.setPosition(imageView3.getX()+20,imageView3.getY()+20, imageView1.getX()+20,imageView1.getY()+20);
+        lineC.invalidate();
+        lineC.setPosition(imageView4.getX()+20,imageView4.getY()+20, imageView2.getX()+20,imageView2.getY()+20);
+
+        lineD.invalidate();
+        lineD.setPosition(imageView3.getX()+20,imageView3.getY()+20, imageView4.getX()+20,imageView4.getY()+20);
+
+    }
+
+    private View.OnClickListener cropEvent(final Activity activity){
+        return new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                BitmapCoordinate pontoA = new BitmapCoordinate(0,0);
+                BitmapCoordinate pontoB = new BitmapCoordinate(71,71);
+                BitmapCoordinate pontoC = new BitmapCoordinate(113,113);
+                BitmapCoordinate pontoD = new BitmapCoordinate(185,185);
+
+                Bitmap bitmapEnvio = ImageUtils.getImage("macaco.png", activity);
+
+                Log.e("ENVIO","Height : "+bitmapEnvio.getHeight());
+                Bitmap bitmapResult = new Quadrilateral(pontoA,pontoB,pontoC,pontoD, bitmapEnvio).getQuadrilateral();
+                Log.e("ENVIO","Height : "+bitmapResult.getHeight());
+                MessageResponse response = new FileUtils(activity).saveImage(bitmapResult, AppVariables.TEMP_IMAGE);
+                Toast.makeText(activity, response.getMsg(),Toast.LENGTH_LONG).show();
+            }
+        };
+    }
+
+
+
+}
